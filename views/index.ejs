@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Online Code Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .dark-mode {
+        background-color: #1a202c;
+        color: white;
+      }
+      .dark-mode textarea,
+      .dark-mode select,
+      .dark-mode pre {
+        background-color: #2d3748;
+        color: white;
+        border-color: #4a5568;
+      }
+      .dark-mode textarea::placeholder {
+        color: white;
+      }
+      .dark-mode h1,
+      label {
+        color: white;
+      }
+      .dark-mode button {
+        background-color: #4a5568;
+        color: white;
+      }
+    </style>
+  </head>
+  <body class="text-gray-800 dark-mode" id="body">
+    <div class="container mx-auto p-5">
+      <!-- Header Section -->
+      <div class="flex flex-col sm:flex-row justify-between items-center mb-5">
+        <h1 class="text-3xl font-bold text-center sm:text-left mb-3 sm:mb-0">
+          Online Code Editor
+        </h1>
+        <div class="flex gap-3">
+          <button
+            id="toggleTheme"
+            class="p-2 bg-blue-500 text-white rounded-md"
+            onclick="toggleTheme()"
+          >
+            Switch to Dark Mode
+          </button>
+          <button
+            id="clearStorage"
+            class="p-2 bg-red-500 text-white rounded-md"
+            onclick="clearStorage()"
+          >
+            Clear Storage
+          </button>
+        </div>
+      </div>
+
+      <!-- Language Selection -->
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-3">
+          <label for="language" class="font-semibold mr-2 dark-mode"
+            >Language:</label
+          >
+          <select
+            id="language"
+            class="p-2 border rounded-md bg-white dark-mode text-black"
+            onchange="onLanguageChange()"
+          >
+            <option value="java">Java</option>
+            <option value="python">Python</option>
+          </select>
+        </div>
+        <h2 class="text-lg font-semibold">Output:</h2>
+      </div>
+
+      <!-- Code Editor and Output Section -->
+      <div class="flex flex-col sm:flex-row gap-4">
+        <!-- Code Editor -->
+        <div class="flex flex-col sm:w-1/2 w-full">
+          <textarea
+            id="code"
+            class="w-full h-[250px] p-3 border rounded-md resize-none overflow-y-auto focus:outline-none focus:ring-2 bg-gray-100 text-black focus:ring-blue-500 dark-mode"
+            placeholder="Write your code here..."
+            oninput="saveCode()"
+            spellcheck="false"
+          ></textarea>
+          <button
+            onclick="runCode()"
+            class="mt-3 w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded-md self-start hover:bg-blue-600"
+          >
+            Run Code
+          </button>
+        </div>
+
+        <!-- Output Section -->
+        <div class="sm:w-1/2 w-full">
+          <pre
+            id="output"
+            class="w-full h-[250px] text-black p-3 border rounded-md bg-gray-100 dark-mode overflow-y-auto"
+          ></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Predefined code snippets
+      const snippets = {
+        java: `public class Main {
+  public static void main(String[] args) {
+    System.out.println("Hello, Java!");
+  }
+}`,
+        python: `def main():
+    print("Hello, Python!")
+
+if __name__ == "__main__":
+    main()`,
+      };
+
+      // Save code to localStorage whenever the user types
+      function saveCode() {
+        const language = document.getElementById("language").value;
+        const code = document.getElementById("code").value;
+        localStorage.setItem(`code_${language}`, code);
+        autoResizeTextarea(); // Adjust the height dynamically
+      }
+
+      // Save the selected language to localStorage
+      function onLanguageChange() {
+        const language = document.getElementById("language").value;
+        localStorage.setItem("selectedLanguage", language);
+        loadSnippet();
+      }
+
+      // Load code snippet or previously saved code
+      function loadSnippet() {
+        const language = document.getElementById("language").value;
+        const savedCode = localStorage.getItem(`code_${language}`);
+        document.getElementById("code").value = savedCode || snippets[language];
+        loadOutput(); // Load corresponding output
+        autoResizeTextarea(); // Adjust textarea height
+      }
+
+      // Load output from localStorage
+      function loadOutput() {
+        const language = document.getElementById("language").value;
+        const savedOutput = localStorage.getItem(`output_${language}`);
+        document.getElementById("output").innerText = savedOutput || "";
+      }
+
+      // Adjust the textarea height dynamically
+      function autoResizeTextarea() {
+        const textarea = document.getElementById("code");
+        textarea.style.height = "auto"; // Reset height
+        textarea.style.height = `${textarea.scrollHeight}px`; // Set new height
+      }
+
+      // Function to run the code
+      async function runCode() {
+        const language = document.getElementById("language").value;
+        const code = document.getElementById("code").value;
+
+        // Save code to localStorage
+        localStorage.setItem(`code_${language}`, code);
+
+        const response = await fetch("/run", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ language, code }),
+        });
+
+        const result = await response.json();
+        const output = result.output;
+
+        // Save output to localStorage
+        localStorage.setItem(`output_${language}`, output);
+
+        document.getElementById("output").innerText = output;
+      }
+
+      // Clear all data from localStorage
+      function clearStorage() {
+        localStorage.clear();
+        document.getElementById("code").value = "";
+        document.getElementById("output").innerText = "";
+        loadSnippet(); // Reload initial snippet
+        alert("All saved data has been cleared!");
+      }
+
+      // Toggle light and dark mode
+      function toggleTheme() {
+        const body = document.getElementById("body");
+        const toggleButton = document.getElementById("toggleTheme");
+
+        if (body.classList.contains("dark-mode")) {
+          body.classList.remove("dark-mode");
+          toggleButton.innerText = "Switch to Dark Mode";
+          localStorage.setItem("theme", "light"); // Save theme to localStorage
+        } else {
+          body.classList.add("dark-mode");
+          toggleButton.innerText = "Switch to Light Mode";
+          localStorage.setItem("theme", "dark"); // Save theme to localStorage
+        }
+      }
+
+      // Restore theme and editor state on page load
+      function restorePageState() {
+        // Restore theme
+        const savedTheme = localStorage.getItem("theme");
+        const body = document.getElementById("body");
+        const toggleButton = document.getElementById("toggleTheme");
+
+        if (savedTheme === "dark") {
+          body.classList.add("dark-mode");
+          toggleButton.innerText = "Switch to Light Mode";
+        } else {
+          body.classList.remove("dark-mode");
+          toggleButton.innerText = "Switch to Dark Mode";
+        }
+
+        // Restore selected language
+        const savedLanguage =
+          localStorage.getItem("selectedLanguage") || "java";
+        document.getElementById("language").value = savedLanguage;
+
+        // Restore code and output for the selected language
+        loadSnippet();
+      }
+
+      // Initialize the editor
+      window.onload = () => {
+        restorePageState();
+      };
+    </script>
+  </body>
+</html>
