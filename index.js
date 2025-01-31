@@ -23,7 +23,7 @@ app.post('/run', (req, res) => {
         fs.writeFileSync(tempFilePath, code);
 
         // Execute the Python script
-        command = `python ${tempFilePath}`;
+        command = `python3 ${tempFilePath}`;
     } 
     else if (language === 'java') {
         const tempFilePath = path.join(__dirname, 'Temp1.java');
@@ -56,4 +56,4 @@ app.post('/run', (req, res) => {
     });
 });
 
-app.listen(4000, () => console.log('Server running on http://localhost:4000'));
+app.listen(5000, () => console.log('Server running on http://localhost:5000'));
